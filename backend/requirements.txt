@@ -1,0 +1,8 @@
+fastapi==0.136.3
+uvicorn[standard]==0.48.0
+sqlalchemy==2.0.50
+python-jose[cryptography]==3.5.0
+bcrypt==5.0.0
+python-multipart==0.0.30
+aiofiles==25.1.0
+stripe==15.2.0

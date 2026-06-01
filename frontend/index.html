@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FREEDOS - Transport & Logistique</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .gradient-hero { background: linear-gradient(135deg, #1e3a5f 0%, #f97316 100%); }
+    .gradient-card { background: linear-gradient(135deg, #1e3a5f, #2563eb); }
+    .gradient-orange { background: linear-gradient(135deg, #f97316, #ea580c); }
+    .truck-animation { animation: truck-move 3s ease-in-out infinite; }
+    @keyframes truck-move { 0%,100%{transform:translateX(0)} 50%{transform:translateX(8px)} }
+    .fade-in { animation: fadeIn 0.4s ease; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+    #map { height: 350px; border-radius: 12px; }
+    .status-badge { @apply px-2 py-1 rounded-full text-xs font-semibold; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #f97316; border-radius: 3px; }
+  </style>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#1e3a5f',
+            accent: '#f97316'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-gray-50 font-sans" x-data="app()" x-init="init()">
+
+  <!-- NAVBAR -->
+  <nav class="bg-primary shadow-lg fixed w-full z-50">
+    <div class="max-w-7xl mx-auto px-4 flex items-center justify-between h-16">
+      <div class="flex items-center gap-3">
+        <i class="fa-solid fa-truck-moving text-accent text-2xl truck-animation"></i>
+        <span class="text-white font-black text-2xl tracking-wider">FREE<span class="text-accent">DOS</span></span>
+      </div>
+      <div x-show="!user" class="flex gap-3">
+        <button @click="page='login'" class="text-white hover:text-accent transition px-4 py-2 rounded font-medium">Connexion</button>
+        <button @click="page='register'" class="bg-accent hover:bg-orange-600 text-white px-5 py-2 rounded-lg font-semibold transition">S'inscrire</button>
+      </div>
+      <div x-show="user" class="flex items-center gap-4">
+        <span class="text-white text-sm hidden md:block">
+          <i class="fa-solid fa-user-circle text-accent mr-1"></i>
+          <span x-text="user?.prenom + ' ' + user?.nom"></span>
+          <span class="ml-2 text-xs bg-accent/20 text-accent px-2 py-0.5 rounded-full" x-text="user?.role == 'client' ? 'Client' : 'Camionneur'"></span>
+        </span>
+        <button @click="logout()" class="text-red-300 hover:text-red-100 transition text-sm"><i class="fa-solid fa-sign-out-alt mr-1"></i>Déconnexion</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- LANDING PAGE -->
+  <div x-show="page === 'home'" x-cloak>
+    <!-- Hero -->
+    <div class="gradient-hero min-h-screen flex items-center justify-center pt-16">
+      <div class="text-center text-white px-4 fade-in">
+        <div class="mb-6">
+          <i class="fa-solid fa-truck-moving text-accent text-7xl truck-animation"></i>
+        </div>
+        <h1 class="text-5xl md:text-7xl font-black mb-4 tracking-tight">
+          FREE<span class="text-accent">DOS</span>
+        </h1>
+        <p class="text-xl md:text-2xl mb-3 font-light text-blue-100">Transport & Logistique Intelligente</p>
+        <p class="text-base md:text-lg text-blue-200 mb-10 max-w-2xl mx-auto">
+          La plateforme qui connecte les <strong class="text-white">clients</strong> aux meilleurs <strong class="text-white">camionneurs</strong> pour des livraisons rapides, sécurisées et traçables.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <button @click="page='register'" class="bg-accent hover:bg-orange-600 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-xl transition-transform hover:scale-105">
+            <i class="fa-solid fa-rocket mr-2"></i>Commencer gratuitement
+          </button>
+          <button @click="page='login'" class="bg-white/10 hover:bg-white/20 text-white border border-white/30 px-8 py-4 rounded-xl font-semibold text-lg transition">
+            <i class="fa-solid fa-sign-in-alt mr-2"></i>Se connecter
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Features -->
+    <div class="bg-white py-20 px-4">
+      <div class="max-w-6xl mx-auto">
+        <h2 class="text-4xl font-black text-center text-primary mb-3">Pourquoi choisir FREEDOS ?</h2>
+        <p class="text-center text-gray-500 mb-14 text-lg">Simple, rapide et fiable</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-8 rounded-2xl text-center hover:shadow-xl transition-shadow">
+            <div class="bg-primary w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5">
+              <i class="fa-solid fa-handshake text-white text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-primary mb-3">Mise en relation directe</h3>
+            <p class="text-gray-600">Publiez votre demande et recevez des offres compétitives de camionneurs vérifiés en quelques minutes.</p>
+          </div>
+          <div class="bg-gradient-to-br from-orange-50 to-orange-100 p-8 rounded-2xl text-center hover:shadow-xl transition-shadow">
+            <div class="bg-accent w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5">
+              <i class="fa-solid fa-location-dot text-white text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-primary mb-3">Suivi en temps réel</h3>
+            <p class="text-gray-600">Suivez votre cargaison sur la carte en direct. Soyez informé à chaque étape du trajet.</p>
+          </div>
+          <div class="bg-gradient-to-br from-green-50 to-green-100 p-8 rounded-2xl text-center hover:shadow-xl transition-shadow">
+            <div class="bg-green-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5">
+              <i class="fa-solid fa-shield-halved text-white text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-primary mb-3">Paiement sécurisé</h3>
+            <p class="text-gray-600">Payez en ligne en toute sécurité. Les fonds sont libérés uniquement après livraison confirmée.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="bg-primary py-16 px-4">
+      <div class="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center text-white">
+        <div><div class="text-4xl font-black text-accent mb-2">500+</div><div class="text-blue-200">Camionneurs</div></div>
+        <div><div class="text-4xl font-black text-accent mb-2">2000+</div><div class="text-blue-200">Livraisons</div></div>
+        <div><div class="text-4xl font-black text-accent mb-2">98%</div><div class="text-blue-200">Satisfaction</div></div>
+        <div><div class="text-4xl font-black text-accent mb-2">24/7</div><div class="text-blue-200">Support</div></div>
+      </div>
+    </div>
+
+    <!-- How it works -->
+    <div class="bg-gray-50 py-20 px-4">
+      <div class="max-w-5xl mx-auto">
+        <h2 class="text-4xl font-black text-center text-primary mb-14">Comment ça marche ?</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div>
+            <h3 class="text-2xl font-bold text-primary mb-6 flex items-center gap-3"><i class="fa-solid fa-user text-accent"></i> Pour les clients</h3>
+            <div class="space-y-4">
+              <div class="flex gap-4 items-start"><div class="bg-accent text-white rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold">1</div><p class="text-gray-700 pt-1">Créez votre compte client et publiez votre demande de transport</p></div>
+              <div class="flex gap-4 items-start"><div class="bg-accent text-white rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold">2</div><p class="text-gray-700 pt-1">Recevez et comparez les offres des camionneurs</p></div>
+              <div class="flex gap-4 items-start"><div class="bg-accent text-white rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold">3</div><p class="text-gray-700 pt-1">Acceptez l'offre qui vous convient et suivez votre cargaison</p></div>
+              <div class="flex gap-4 items-start"><div class="bg-accent text-white rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold">4</div><p class="text-gray-700 pt-1">Payez en ligne après confirmation de la livraison</p></div>
+            </div>
+          </div>
+          <div>
+            <h3 class="text-2xl font-bold text-primary mb-6 flex items-center gap-3"><i class="fa-solid fa-truck text-accent"></i> Pour les camionneurs</h3>
+            <div class="space-y-4">
+              <div class="flex gap-4 items-start"><div class="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold">1</div><p class="text-gray-700 pt-1">Inscrivez-vous avec les informations de votre camion</p></div>
+              <div class="flex gap-4 items-start"><div class="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold">2</div><p class="text-gray-700 pt-1">Consultez les demandes disponibles et soumettez vos offres</p></div>
+              <div class="flex gap-4 items-start"><div class="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold">3</div><p class="text-gray-700 pt-1">Commencez le transport et mettez à jour votre position</p></div>
+              <div class="flex gap-4 items-start"><div class="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold">4</div><p class="text-gray-700 pt-1">Recevez votre paiement directement après la livraison</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-primary text-white py-10 text-center">
+      <div class="flex items-center justify-center gap-3 mb-4">
+        <i class="fa-solid fa-truck-moving text-accent text-2xl"></i>
+        <span class="font-black text-2xl">FREE<span class="text-accent">DOS</span></span>
+      </div>
+      <p class="text-blue-200 text-sm">&copy; 2025 FREEDOS — Transport & Logistique. Tous droits réservés.</p>
+    </footer>
+  </div>
+
+  <!-- LOGIN -->
+  <div x-show="page === 'login'" x-cloak class="min-h-screen gradient-hero flex items-center justify-center pt-16 px-4">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md fade-in">
+      <div class="text-center mb-8">
+        <i class="fa-solid fa-truck-moving text-accent text-4xl truck-animation"></i>
+        <h2 class="text-3xl font-black text-primary mt-3">FREE<span class="text-accent">DOS</span></h2>
+        <p class="text-gray-500 mt-1">Connexion à votre compte</p>
+      </div>
+      <div x-show="error" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-5 text-sm flex items-center gap-2">
+        <i class="fa-solid fa-circle-exclamation"></i><span x-text="error"></span>
+      </div>
+      <form @submit.prevent="login()">
+        <div class="mb-5">
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+          <div class="relative">
+            <i class="fa-solid fa-envelope absolute left-3 top-3.5 text-gray-400"></i>
+            <input x-model="loginForm.email" type="email" required class="w-full border border-gray-200 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent" placeholder="votre@email.com"/>
+          </div>
+        </div>
+        <div class="mb-6">
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Mot de passe</label>
+          <div class="relative">
+            <i class="fa-solid fa-lock absolute left-3 top-3.5 text-gray-400"></i>
+            <input x-model="loginForm.password" type="password" required class="w-full border border-gray-200 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent" placeholder="••••••••"/>
+          </div>
+        </div>
+        <button type="submit" :disabled="loading" class="w-full bg-primary hover:bg-blue-900 text-white py-3 rounded-xl font-bold text-lg transition disabled:opacity-50">
+          <span x-show="!loading"><i class="fa-solid fa-sign-in-alt mr-2"></i>Se connecter</span>
+          <span x-show="loading"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion...</span>
+        </button>
+      </form>
+      <p class="text-center text-gray-500 mt-5 text-sm">
+        Pas encore de compte ?
+        <button @click="page='register'" class="text-accent font-semibold hover:underline">S'inscrire</button>
+      </p>
+      <button @click="page='home'" class="w-full mt-3 text-gray-400 hover:text-gray-600 text-sm transition">
+        <i class="fa-solid fa-arrow-left mr-1"></i>Retour à l'accueil
+      </button>
+    </div>
+  </div>
+
+  <!-- REGISTER -->
+  <div x-show="page === 'register'" x-cloak class="min-h-screen gradient-hero flex items-center justify-center pt-16 pb-10 px-4">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg fade-in">
+      <div class="text-center mb-6">
+        <i class="fa-solid fa-truck-moving text-accent text-4xl truck-animation"></i>
+        <h2 class="text-3xl font-black text-primary mt-3">FREE<span class="text-accent">DOS</span></h2>
+        <p class="text-gray-500 mt-1">Créer un nouveau compte</p>
+      </div>
+      <div x-show="error" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-5 text-sm flex items-center gap-2">
+        <i class="fa-solid fa-circle-exclamation"></i><span x-text="error"></span>
+      </div>
+
+      <!-- Role Selection -->
+      <div class="grid grid-cols-2 gap-3 mb-6">
+        <button @click="registerForm.role='client'" :class="registerForm.role=='client' ? 'border-accent bg-orange-50 text-accent' : 'border-gray-200 text-gray-500'" class="border-2 rounded-xl p-4 flex flex-col items-center gap-2 transition font-semibold">
+          <i class="fa-solid fa-user text-2xl"></i><span>Je suis Client</span>
+        </button>
+        <button @click="registerForm.role='camionneur'" :class="registerForm.role=='camionneur' ? 'border-primary bg-blue-50 text-primary' : 'border-gray-200 text-gray-500'" class="border-2 rounded-xl p-4 flex flex-col items-center gap-2 transition font-semibold">
+          <i class="fa-solid fa-truck text-2xl"></i><span>Je suis Camionneur</span>
+        </button>
+      </div>
+
+      <form @submit.prevent="register()">
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Prénom</label>
+            <input x-model="registerForm.prenom" required class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent" placeholder="Jean"/>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Nom</label>
+            <input x-model="registerForm.nom" required class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent" placeholder="Dupont"/>
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+          <input x-model="registerForm.email" type="email" required class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent" placeholder="email@exemple.com"/>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Téléphone</label>
+          <input x-model="registerForm.telephone" required class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent" placeholder="+226 XX XX XX XX"/>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Mot de passe</label>
+          <input x-model="registerForm.password" type="password" required minlength="6" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent" placeholder="Minimum 6 caractères"/>
+        </div>
+
+        <!-- Camionneur specific fields -->
+        <div x-show="registerForm.role === 'camionneur'" class="border-t pt-4 mt-2 mb-4 space-y-4">
+          <p class="text-sm font-bold text-primary flex items-center gap-2"><i class="fa-solid fa-truck text-accent"></i>Informations du camion</p>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1">Type de camion</label>
+              <select x-model="registerForm.type_camion" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent">
+                <option value="">Sélectionner</option>
+                <option>Camion benne</option>
+                <option>Camion frigorifique</option>
+                <option>Semi-remorque</option>
+                <option>Camionnette</option>
+                <option>Porte-conteneur</option>
+                <option>Camion citerne</option>
+                <option>Fourgon</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1">Capacité (tonnes)</label>
+              <input x-model="registerForm.capacite_tonnes" type="number" step="0.5" min="0.5" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent" placeholder="5"/>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Numéro de plaque</label>
+            <input x-model="registerForm.numero_plaque" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent" placeholder="BF-1234-A"/>
+          </div>
+        </div>
+
+        <button type="submit" :disabled="loading" class="w-full bg-accent hover:bg-orange-600 text-white py-3 rounded-xl font-bold text-lg transition disabled:opacity-50 mt-2">
+          <span x-show="!loading"><i class="fa-solid fa-user-plus mr-2"></i>Créer mon compte</span>
+          <span x-show="loading"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Inscription...</span>
+        </button>
+      </form>
+      <p class="text-center text-gray-500 mt-4 text-sm">
+        Déjà inscrit ?
+        <button @click="page='login'" class="text-accent font-semibold hover:underline">Se connecter</button>
+      </p>
+    </div>
+  </div>
+
+  <!-- DASHBOARD CLIENT -->
+  <div x-show="page === 'dashboard' && user?.role === 'client'" x-cloak class="pt-16 min-h-screen bg-gray-50">
+    <!-- Sidebar + Content -->
+    <div class="max-w-7xl mx-auto px-4 py-8">
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-8">
+        <div>
+          <h1 class="text-3xl font-black text-primary">Bonjour, <span x-text="user?.prenom"></span> 👋</h1>
+          <p class="text-gray-500">Gérez vos expéditions depuis votre tableau de bord</p>
+        </div>
+        <button @click="openNewShipment()" class="bg-accent hover:bg-orange-600 text-white px-5 py-3 rounded-xl font-bold shadow-lg transition-transform hover:scale-105">
+          <i class="fa-solid fa-plus mr-2"></i>Nouvelle expédition
+        </button>
+      </div>
+
+      <!-- Stats -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-gray-500 text-sm font-medium">Total</span>
+            <div class="bg-blue-100 p-2 rounded-lg"><i class="fa-solid fa-box text-primary"></i></div>
+          </div>
+          <div class="text-3xl font-black text-primary" x-text="stats.total_expeditions || 0"></div>
+          <div class="text-xs text-gray-400 mt-1">Expéditions</div>
+        </div>
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-gray-500 text-sm font-medium">En cours</span>
+            <div class="bg-orange-100 p-2 rounded-lg"><i class="fa-solid fa-truck text-accent"></i></div>
+          </div>
+          <div class="text-3xl font-black text-accent" x-text="stats.expeditions_en_cours || 0"></div>
+          <div class="text-xs text-gray-400 mt-1">En transit</div>
+        </div>
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-gray-500 text-sm font-medium">Livrées</span>
+            <div class="bg-green-100 p-2 rounded-lg"><i class="fa-solid fa-check-circle text-green-600"></i></div>
+          </div>
+          <div class="text-3xl font-black text-green-600" x-text="stats.expeditions_livrees || 0"></div>
+          <div class="text-xs text-gray-400 mt-1">Terminées</div>
+        </div>
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-gray-500 text-sm font-medium">Dépenses</span>
+            <div class="bg-purple-100 p-2 rounded-lg"><i class="fa-solid fa-wallet text-purple-600"></i></div>
+          </div>
+          <div class="text-2xl font-black text-purple-600" x-text="formatPrice(stats.total_depenses || 0)"></div>
+          <div class="text-xs text-gray-400 mt-1">FCFA total</div>
+        </div>
+      </div>
+
+      <!-- Shipments List -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-bold text-primary"><i class="fa-solid fa-list-ul mr-2 text-accent"></i>Mes expéditions</h2>
+          <div class="flex gap-2">
+            <select x-model="filterStatus" @change="loadShipments()" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent">
+              <option value="">Tous les statuts</option>
+              <option value="en_attente">En attente</option>
+              <option value="offre_acceptee">Offre acceptée</option>
+              <option value="en_transit">En transit</option>
+              <option value="livre">Livré</option>
+            </select>
+          </div>
+        </div>
+
+        <div x-show="shipments.length === 0" class="text-center py-16 text-gray-400">
+          <i class="fa-solid fa-box-open text-6xl mb-4 block text-gray-200"></i>
+          <p class="text-lg font-medium">Aucune expédition pour le moment</p>
+          <p class="text-sm mt-1">Créez votre première demande de transport</p>
+          <button @click="openNewShipment()" class="mt-5 bg-accent text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-orange-600 transition">
+            <i class="fa-solid fa-plus mr-2"></i>Créer une expédition
+          </button>
+        </div>
+
+        <div class="space-y-4">
+          <template x-for="s in shipments" :key="s.id">
+            <div class="border border-gray-100 rounded-xl p-5 hover:shadow-md transition cursor-pointer" @click="viewShipment(s)">
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center gap-3 mb-2">
+                    <span class="font-bold text-primary text-lg" x-text="'#' + s.id + ' — ' + s.type_marchandise"></span>
+                    <span :class="statusClass(s.statut)" class="status-badge" x-text="statusLabel(s.statut)"></span>
+                  </div>
+                  <div class="flex flex-wrap gap-4 text-sm text-gray-600">
+                    <span><i class="fa-solid fa-location-dot text-green-500 mr-1"></i><span x-text="s.ville_depart"></span></span>
+                    <span><i class="fa-solid fa-arrow-right text-gray-400 mx-1"></i></span>
+                    <span><i class="fa-solid fa-location-dot text-red-500 mr-1"></i><span x-text="s.ville_arrivee"></span></span>
+                    <span><i class="fa-solid fa-weight-hanging text-gray-400 mr-1"></i><span x-text="s.poids_kg + ' kg'"></span></span>
+                    <span><i class="fa-solid fa-calendar text-gray-400 mr-1"></i><span x-text="s.date_souhaitee"></span></span>
+                  </div>
+                  <div x-show="s.prix_final" class="mt-2">
+                    <span class="text-green-700 font-semibold text-sm"><i class="fa-solid fa-tag mr-1"></i>Prix: <span x-text="formatPrice(s.prix_final)"></span> FCFA</span>
+                  </div>
+                </div>
+                <div class="text-right ml-4">
+                  <div class="text-sm text-gray-400" x-text="formatDate(s.date_creation)"></div>
+                  <div x-show="s.offers && s.offers.length > 0" class="mt-2">
+                    <span class="bg-accent/10 text-accent text-xs px-2 py-1 rounded-full font-semibold">
+                      <i class="fa-solid fa-tags mr-1"></i><span x-text="s.offers.length"></span> offre(s)
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD CAMIONNEUR -->
+  <div x-show="page === 'dashboard' && user?.role === 'camionneur'" x-cloak class="pt-16 min-h-screen bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 py-8">
+      <div class="flex items-center justify-between mb-8">
+        <div>
+          <h1 class="text-3xl font-black text-primary">Bonjour, <span x-text="user?.prenom"></span> 🚛</h1>
+          <p class="text-gray-500">Trouvez des missions et gérez vos livraisons</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
+          <div class="text-xs text-gray-500 mb-1">Mon camion</div>
+          <div class="font-bold text-primary text-sm" x-text="user?.type_camion"></div>
+          <div class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded mt-1" x-text="user?.numero_plaque"></div>
+        </div>
+      </div>
+
+      <!-- Stats camionneur -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-gray-500 text-sm">Missions</span>
+            <div class="bg-blue-100 p-2 rounded-lg"><i class="fa-solid fa-route text-primary"></i></div>
+          </div>
+          <div class="text-3xl font-black text-primary" x-text="stats.total_livraisons || 0"></div>
+        </div>
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-gray-500 text-sm">En cours</span>
+            <div class="bg-orange-100 p-2 rounded-lg"><i class="fa-solid fa-truck-moving text-accent"></i></div>
+          </div>
+          <div class="text-3xl font-black text-accent" x-text="stats.livraisons_en_cours || 0"></div>
+        </div>
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-gray-500 text-sm">Terminées</span>
+            <div class="bg-green-100 p-2 rounded-lg"><i class="fa-solid fa-flag-checkered text-green-600"></i></div>
+          </div>
+          <div class="text-3xl font-black text-green-600" x-text="stats.livraisons_terminees || 0"></div>
+        </div>
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-gray-500 text-sm">Gains</span>
+            <div class="bg-yellow-100 p-2 rounded-lg"><i class="fa-solid fa-coins text-yellow-600"></i></div>
+          </div>
+          <div class="text-xl font-black text-yellow-600" x-text="formatPrice(stats.total_gains || 0)"></div>
+          <div class="text-xs text-gray-400">FCFA</div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="flex gap-2 mb-6">
+        <button @click="camionneurTab='disponibles'" :class="camionneurTab=='disponibles' ? 'bg-primary text-white' : 'bg-white text-gray-600 hover:bg-gray-50'" class="px-5 py-2.5 rounded-xl font-semibold transition border border-gray-200">
+          <i class="fa-solid fa-search mr-2"></i>Disponibles
+        </button>
+        <button @click="camionneurTab='mes_missions'; loadShipments()" :class="camionneurTab=='mes_missions' ? 'bg-primary text-white' : 'bg-white text-gray-600 hover:bg-gray-50'" class="px-5 py-2.5 rounded-xl font-semibold transition border border-gray-200">
+          <i class="fa-solid fa-truck mr-2"></i>Mes missions
+        </button>
+      </div>
+
+      <!-- Available shipments -->
+      <div x-show="camionneurTab === 'disponibles'" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <h2 class="text-xl font-bold text-primary mb-6"><i class="fa-solid fa-clipboard-list mr-2 text-accent"></i>Demandes disponibles</h2>
+        <div x-show="availableShipments.length === 0" class="text-center py-16 text-gray-400">
+          <i class="fa-solid fa-inbox text-6xl mb-4 block text-gray-200"></i>
+          <p>Aucune demande disponible pour le moment</p>
+        </div>
+        <div class="space-y-4">
+          <template x-for="s in availableShipments" :key="s.id">
+            <div class="border border-gray-100 rounded-xl p-5 hover:shadow-md hover:border-accent/30 transition">
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center gap-3 mb-2">
+                    <span class="font-bold text-primary text-lg" x-text="'#' + s.id + ' — ' + s.type_marchandise"></span>
+                    <span class="bg-blue-100 text-blue-700 status-badge">Disponible</span>
+                  </div>
+                  <div class="flex flex-wrap gap-4 text-sm text-gray-600 mb-3">
+                    <span><i class="fa-solid fa-location-dot text-green-500 mr-1"></i><span x-text="s.ville_depart"></span></span>
+                    <i class="fa-solid fa-long-arrow-right text-gray-300"></i>
+                    <span><i class="fa-solid fa-location-dot text-red-500 mr-1"></i><span x-text="s.ville_arrivee"></span></span>
+                    <span><i class="fa-solid fa-weight-hanging text-gray-400 mr-1"></i><span x-text="s.poids_kg + ' kg'"></span></span>
+                  </div>
+                  <p class="text-gray-600 text-sm mb-3 line-clamp-2" x-text="s.description"></p>
+                  <div class="flex flex-wrap gap-3 text-xs text-gray-500">
+                    <span class="bg-gray-100 px-2 py-1 rounded"><i class="fa-solid fa-calendar mr-1"></i><span x-text="s.date_souhaitee"></span></span>
+                    <span x-show="s.budget_max" class="bg-green-100 text-green-700 px-2 py-1 rounded font-semibold"><i class="fa-solid fa-tag mr-1"></i>Budget: <span x-text="formatPrice(s.budget_max)"></span> FCFA</span>
+                    <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded"><i class="fa-solid fa-user mr-1"></i><span x-text="s.client?.prenom + ' ' + s.client?.nom"></span></span>
+                  </div>
+                </div>
+                <button @click="openOfferModal(s)" class="ml-4 bg-accent hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold text-sm transition flex-shrink-0">
+                  <i class="fa-solid fa-paper-plane mr-1"></i>Faire une offre
+                </button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Mes missions -->
+      <div x-show="camionneurTab === 'mes_missions'" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <h2 class="text-xl font-bold text-primary mb-6"><i class="fa-solid fa-truck-moving mr-2 text-accent"></i>Mes missions</h2>
+        <div x-show="shipments.length === 0" class="text-center py-16 text-gray-400">
+          <i class="fa-solid fa-truck text-6xl mb-4 block text-gray-200"></i>
+          <p>Aucune mission assignée pour le moment</p>
+        </div>
+        <div class="space-y-4">
+          <template x-for="s in shipments" :key="s.id">
+            <div class="border border-gray-100 rounded-xl p-5 hover:shadow-md transition cursor-pointer" @click="viewShipment(s)">
+              <div class="flex items-start justify-between">
+                <div>
+                  <div class="flex items-center gap-3 mb-2">
+                    <span class="font-bold text-primary" x-text="'#' + s.id + ' — ' + s.type_marchandise"></span>
+                    <span :class="statusClass(s.statut)" class="status-badge" x-text="statusLabel(s.statut)"></span>
+                  </div>
+                  <div class="flex flex-wrap gap-4 text-sm text-gray-600">
+                    <span><i class="fa-solid fa-location-dot text-green-500 mr-1"></i><span x-text="s.ville_depart"></span></span>
+                    <i class="fa-solid fa-arrow-right text-gray-300"></i>
+                    <span><i class="fa-solid fa-location-dot text-red-500 mr-1"></i><span x-text="s.ville_arrivee"></span></span>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="font-bold text-green-600 text-lg" x-text="formatPrice(s.prix_final) + ' FCFA'"></div>
+                  <button x-show="s.statut === 'offre_acceptee'" @click.stop="startTransit(s.id)" class="mt-2 bg-primary text-white text-xs px-3 py-1.5 rounded-lg hover:bg-blue-900 transition">
+                    <i class="fa-solid fa-play mr-1"></i>Démarrer
+                  </button>
+                  <button x-show="s.statut === 'en_transit'" @click.stop="openTrackingUpdate(s)" class="mt-2 bg-accent text-white text-xs px-3 py-1.5 rounded-lg hover:bg-orange-600 transition">
+                    <i class="fa-solid fa-location-dot mr-1"></i>Mettre à jour
+                  </button>
+                  <button x-show="s.statut === 'en_transit'" @click.stop="markDelivered(s.id)" class="mt-1 bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-700 transition block w-full">
+                    <i class="fa-solid fa-check mr-1"></i>Marquer livré
+                  </button>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SHIPMENT DETAIL MODAL -->
+  <div x-show="modal === 'shipment_detail'" x-cloak class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 pt-16 px-4 pb-4 overflow-y-auto" @click.self="modal=null">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl my-4 fade-in">
+      <div class="bg-primary text-white p-6 rounded-t-2xl">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-xl font-bold" x-text="'Expédition #' + selectedShipment?.id"></h3>
+            <p class="text-blue-200 text-sm" x-text="selectedShipment?.type_marchandise"></p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span :class="statusClass(selectedShipment?.statut)" class="status-badge" x-text="statusLabel(selectedShipment?.statut)"></span>
+            <button @click="modal=null" class="text-white/70 hover:text-white text-xl"><i class="fa-solid fa-times"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-6">
+        <!-- Route -->
+        <div class="bg-gray-50 rounded-xl p-4 mb-6">
+          <div class="flex items-center gap-4">
+            <div class="flex-1">
+              <div class="text-xs text-gray-500 mb-1">Départ</div>
+              <div class="font-bold text-primary" x-text="selectedShipment?.ville_depart"></div>
+              <div class="text-sm text-gray-500" x-text="selectedShipment?.adresse_depart"></div>
+            </div>
+            <div class="flex-shrink-0 text-accent"><i class="fa-solid fa-truck-moving text-3xl"></i></div>
+            <div class="flex-1 text-right">
+              <div class="text-xs text-gray-500 mb-1">Destination</div>
+              <div class="font-bold text-primary" x-text="selectedShipment?.ville_arrivee"></div>
+              <div class="text-sm text-gray-500" x-text="selectedShipment?.adresse_arrivee"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Details grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div class="bg-blue-50 rounded-xl p-4 text-center">
+            <i class="fa-solid fa-weight-hanging text-primary text-xl mb-2 block"></i>
+            <div class="font-bold text-primary" x-text="selectedShipment?.poids_kg + ' kg'"></div>
+            <div class="text-xs text-gray-500">Poids</div>
+          </div>
+          <div x-show="selectedShipment?.volume_m3" class="bg-blue-50 rounded-xl p-4 text-center">
+            <i class="fa-solid fa-cube text-primary text-xl mb-2 block"></i>
+            <div class="font-bold text-primary" x-text="selectedShipment?.volume_m3 + ' m³'"></div>
+            <div class="text-xs text-gray-500">Volume</div>
+          </div>
+          <div class="bg-orange-50 rounded-xl p-4 text-center">
+            <i class="fa-solid fa-calendar text-accent text-xl mb-2 block"></i>
+            <div class="font-bold text-accent" x-text="selectedShipment?.date_souhaitee"></div>
+            <div class="text-xs text-gray-500">Date souhaitée</div>
+          </div>
+          <div x-show="selectedShipment?.prix_final" class="bg-green-50 rounded-xl p-4 text-center">
+            <i class="fa-solid fa-money-bill text-green-600 text-xl mb-2 block"></i>
+            <div class="font-bold text-green-600" x-text="formatPrice(selectedShipment?.prix_final) + ' FCFA'"></div>
+            <div class="text-xs text-gray-500">Prix convenu</div>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="mb-6">
+          <h4 class="font-bold text-gray-700 mb-2">Description de la marchandise</h4>
+          <p class="text-gray-600 bg-gray-50 rounded-lg p-3" x-text="selectedShipment?.description"></p>
+        </div>
+
+        <!-- Camionneur info -->
+        <div x-show="selectedShipment?.camionneur" class="bg-blue-50 rounded-xl p-4 mb-6">
+          <h4 class="font-bold text-primary mb-3"><i class="fa-solid fa-truck mr-2"></i>Camionneur assigné</h4>
+          <div class="flex items-center gap-4">
+            <div class="bg-primary text-white rounded-full w-12 h-12 flex items-center justify-center text-lg font-bold" x-text="(selectedShipment?.camionneur?.prenom[0] || '') + (selectedShipment?.camionneur?.nom[0] || '')"></div>
+            <div>
+              <div class="font-bold" x-text="selectedShipment?.camionneur?.prenom + ' ' + selectedShipment?.camionneur?.nom"></div>
+              <div class="text-sm text-gray-600" x-text="selectedShipment?.camionneur?.type_camion + ' — ' + selectedShipment?.camionneur?.numero_plaque"></div>
+              <div class="text-sm text-gray-500"><i class="fa-solid fa-phone mr-1"></i><span x-text="selectedShipment?.camionneur?.telephone"></span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tracking Map -->
+        <div x-show="selectedShipment?.statut === 'en_transit' || selectedShipment?.statut === 'livre'" class="mb-6">
+          <h4 class="font-bold text-gray-700 mb-3"><i class="fa-solid fa-map-location-dot mr-2 text-accent"></i>Suivi en temps réel</h4>
+          <div id="map"></div>
+        </div>
+
+        <!-- Payment button for client -->
+        <div x-show="user?.role === 'client' && selectedShipment?.statut === 'en_transit' && !selectedShipment?.paiement_effectue" class="mb-6">
+          <button @click="simulatePayment()" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold transition">
+            <i class="fa-solid fa-credit-card mr-2"></i>Payer <span x-text="formatPrice(selectedShipment?.prix_final)"></span> FCFA
+          </button>
+        </div>
+
+        <!-- Offers section for client -->
+        <div x-show="user?.role === 'client' && selectedShipment?.statut === 'en_attente'" class="mb-2">
+          <h4 class="font-bold text-gray-700 mb-4"><i class="fa-solid fa-tags mr-2 text-accent"></i>Offres reçues (<span x-text="selectedShipment?.offers?.length || 0"></span>)</h4>
+          <div x-show="!selectedShipment?.offers?.length" class="text-center py-8 text-gray-400">
+            <i class="fa-solid fa-hourglass-half text-4xl mb-3 block text-gray-200"></i>
+            <p>En attente d'offres des camionneurs...</p>
+          </div>
+          <div class="space-y-3">
+            <template x-for="offer in selectedShipment?.offers" :key="offer.id">
+              <div class="border rounded-xl p-4 flex items-center justify-between" :class="offer.statut === 'acceptee' ? 'border-green-300 bg-green-50' : 'border-gray-200'">
+                <div>
+                  <div class="flex items-center gap-2 mb-1">
+                    <div class="font-bold text-primary" x-text="offer.camionneur?.prenom + ' ' + offer.camionneur?.nom"></div>
+                    <span x-show="offer.statut === 'acceptee'" class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold">Acceptée</span>
+                  </div>
+                  <div class="text-sm text-gray-500 mb-1" x-text="offer.camionneur?.type_camion + ' — ' + offer.camionneur?.numero_plaque"></div>
+                  <div class="text-sm text-gray-600" x-text="offer.message"></div>
+                  <div class="flex gap-4 mt-2 text-xs text-gray-500">
+                    <span><i class="fa-solid fa-clock mr-1"></i><span x-text="offer.delai_jours"></span> jour(s)</span>
+                  </div>
+                </div>
+                <div class="text-right ml-4">
+                  <div class="text-xl font-black text-accent" x-text="formatPrice(offer.prix_propose)"></div>
+                  <div class="text-xs text-gray-400 mb-3">FCFA</div>
+                  <div x-show="offer.statut === 'en_attente'" class="flex gap-2">
+                    <button @click="acceptOffer(offer.id)" class="bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-700 transition font-semibold">
+                      <i class="fa-solid fa-check mr-1"></i>Accepter
+                    </button>
+                    <button @click="refuseOffer(offer.id)" class="bg-red-100 text-red-600 text-xs px-3 py-1.5 rounded-lg hover:bg-red-200 transition font-semibold">
+                      <i class="fa-solid fa-times mr-1"></i>Refuser
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEW SHIPMENT MODAL -->
+  <div x-show="modal === 'new_shipment'" x-cloak class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 pt-16 px-4 pb-4 overflow-y-auto" @click.self="modal=null">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl my-4 fade-in">
+      <div class="bg-primary text-white p-6 rounded-t-2xl flex items-center justify-between">
+        <div>
+          <h3 class="text-xl font-bold">Nouvelle expédition</h3>
+          <p class="text-blue-200 text-sm">Décrivez votre besoin de transport</p>
+        </div>
+        <button @click="modal=null" class="text-white/70 hover:text-white text-xl"><i class="fa-solid fa-times"></i></button>
+      </div>
+      <form @submit.prevent="createShipment()" class="p-6 space-y-5">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Type de marchandise *</label>
+            <select x-model="newShipment.type_marchandise" required class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent">
+              <option value="">Choisir...</option>
+              <option>Alimentation / Denrées</option>
+              <option>Matériaux de construction</option>
+              <option>Électroménager</option>
+              <option>Textile / Vêtements</option>
+              <option>Matériel agricole</option>
+              <option>Produits chimiques</option>
+              <option>Mobilier</option>
+              <option>Véhicules</option>
+              <option>Autres marchandises</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Poids (kg) *</label>
+            <input x-model="newShipment.poids_kg" type="number" required min="1" step="0.5" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent" placeholder="500"/>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Description *</label>
+          <textarea x-model="newShipment.description" required rows="3" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent resize-none" placeholder="Décrivez votre marchandise et les besoins spécifiques..."></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Ville de départ *</label>
+            <input x-model="newShipment.ville_depart" required class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent" placeholder="Ouagadougou"/>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Ville d'arrivée *</label>
+            <input x-model="newShipment.ville_arrivee" required class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent" placeholder="Bobo-Dioulasso"/>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Adresse de départ *</label>
+            <input x-model="newShipment.adresse_depart" required class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent" placeholder="Rue 12, secteur 5"/>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Adresse d'arrivée *</label>
+            <input x-model="newShipment.adresse_arrivee" required class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent" placeholder="Zone industrielle"/>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Date souhaitée *</label>
+            <input x-model="newShipment.date_souhaitee" type="date" required class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent"/>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Budget max (FCFA)</label>
+            <input x-model="newShipment.budget_max" type="number" min="0" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent" placeholder="150000"/>
+          </div>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" @click="modal=null" class="flex-1 border border-gray-200 text-gray-600 py-3 rounded-xl font-semibold hover:bg-gray-50 transition">Annuler</button>
+          <button type="submit" :disabled="loading" class="flex-1 bg-accent hover:bg-orange-600 text-white py-3 rounded-xl font-bold transition disabled:opacity-50">
+            <span x-show="!loading"><i class="fa-solid fa-paper-plane mr-2"></i>Publier</span>
+            <span x-show="loading"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Publication...</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- OFFER MODAL -->
+  <div x-show="modal === 'new_offer'" x-cloak class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4" @click.self="modal=null">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md fade-in">
+      <div class="bg-accent text-white p-6 rounded-t-2xl flex items-center justify-between">
+        <div>
+          <h3 class="text-xl font-bold">Soumettre une offre</h3>
+          <p class="text-orange-100 text-sm" x-text="'Expédition #' + selectedShipmentForOffer?.id"></p>
+        </div>
+        <button @click="modal=null" class="text-white/70 hover:text-white text-xl"><i class="fa-solid fa-times"></i></button>
+      </div>
+      <form @submit.prevent="submitOffer()" class="p-6 space-y-5">
+        <div class="bg-gray-50 rounded-xl p-4 text-sm text-gray-600">
+          <div class="flex justify-between mb-1"><span>Trajet:</span><span class="font-semibold" x-text="selectedShipmentForOffer?.ville_depart + ' → ' + selectedShipmentForOffer?.ville_arrivee"></span></div>
+          <div class="flex justify-between mb-1"><span>Marchandise:</span><span class="font-semibold" x-text="selectedShipmentForOffer?.type_marchandise"></span></div>
+          <div class="flex justify-between"><span>Poids:</span><span class="font-semibold" x-text="selectedShipmentForOffer?.poids_kg + ' kg'"></span></div>
+          <div x-show="selectedShipmentForOffer?.budget_max" class="flex justify-between mt-1"><span>Budget max client:</span><span class="font-semibold text-green-600" x-text="formatPrice(selectedShipmentForOffer?.budget_max) + ' FCFA'"></span></div>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Votre prix (FCFA) *</label>
+          <input x-model="offerForm.prix_propose" type="number" required min="1000" step="500" class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent text-lg font-bold" placeholder="120 000"/>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Délai de livraison (jours) *</label>
+          <input x-model="offerForm.delai_jours" type="number" required min="1" max="30" class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent" placeholder="2"/>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Message au client</label>
+          <textarea x-model="offerForm.message" rows="3" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent resize-none" placeholder="Décrivez votre disponibilité et votre expérience pour ce trajet..."></textarea>
+        </div>
+        <div class="flex gap-3">
+          <button type="button" @click="modal=null" class="flex-1 border border-gray-200 text-gray-600 py-3 rounded-xl font-semibold hover:bg-gray-50 transition">Annuler</button>
+          <button type="submit" :disabled="loading" class="flex-1 bg-accent hover:bg-orange-600 text-white py-3 rounded-xl font-bold transition disabled:opacity-50">
+            <span x-show="!loading"><i class="fa-solid fa-paper-plane mr-2"></i>Envoyer l'offre</span>
+            <span x-show="loading"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Envoi...</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TRACKING UPDATE MODAL (Camionneur) -->
+  <div x-show="modal === 'tracking_update'" x-cloak class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4" @click.self="modal=null">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md fade-in">
+      <div class="bg-primary text-white p-6 rounded-t-2xl flex items-center justify-between">
+        <h3 class="text-xl font-bold"><i class="fa-solid fa-location-dot mr-2 text-accent"></i>Mise à jour de position</h3>
+        <button @click="modal=null" class="text-white/70 hover:text-white"><i class="fa-solid fa-times"></i></button>
+      </div>
+      <div class="p-6 space-y-4">
+        <p class="text-gray-600 text-sm">Partagez votre position actuelle pour que le client puisse suivre sa livraison.</p>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Latitude</label>
+            <input x-model="trackingForm.latitude" type="number" step="0.000001" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent" placeholder="12.3640"/>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Longitude</label>
+            <input x-model="trackingForm.longitude" type="number" step="0.000001" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent" placeholder="-1.5275"/>
+          </div>
+        </div>
+        <button @click="getGPS()" class="w-full border-2 border-dashed border-accent text-accent py-3 rounded-xl font-semibold hover:bg-orange-50 transition">
+          <i class="fa-solid fa-crosshairs mr-2"></i>Utiliser ma position GPS actuelle
+        </button>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Message (optionnel)</label>
+          <input x-model="trackingForm.message" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent" placeholder="Ex: Arrivé à Koudougou..."/>
+        </div>
+        <button @click="sendTrackingUpdate()" :disabled="loading" class="w-full bg-primary hover:bg-blue-900 text-white py-3 rounded-xl font-bold transition disabled:opacity-50">
+          <span x-show="!loading"><i class="fa-solid fa-share-nodes mr-2"></i>Envoyer ma position</span>
+          <span x-show="loading"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Envoi...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div x-show="toast.show" x-cloak class="fixed bottom-6 right-6 z-50 max-w-sm fade-in">
+    <div :class="toast.type === 'success' ? 'bg-green-600' : toast.type === 'error' ? 'bg-red-600' : 'bg-primary'" class="text-white px-5 py-4 rounded-xl shadow-xl flex items-center gap-3">
+      <i :class="toast.type === 'success' ? 'fa-solid fa-check-circle' : toast.type === 'error' ? 'fa-solid fa-times-circle' : 'fa-solid fa-info-circle'" class="text-xl flex-shrink-0"></i>
+      <span x-text="toast.message" class="font-medium text-sm"></span>
+    </div>
+  </div>
+
+<script>
+const API = window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
+
+function app() {
+  return {
+    page: 'home',
+    modal: null,
+    user: null,
+    token: null,
+    loading: false,
+    error: null,
+    shipments: [],
+    availableShipments: [],
+    stats: {},
+    selectedShipment: null,
+    selectedShipmentForOffer: null,
+    filterStatus: '',
+    camionneurTab: 'disponibles',
+    map: null,
+    mapMarker: null,
+    toast: { show: false, message: '', type: 'success' },
+
+    loginForm: { email: '', password: '' },
+    registerForm: { prenom: '', nom: '', email: '', telephone: '', password: '', role: 'client', type_camion: '', capacite_tonnes: '', numero_plaque: '' },
+    newShipment: { description: '', type_marchandise: '', poids_kg: '', adresse_depart: '', ville_depart: '', adresse_arrivee: '', ville_arrivee: '', date_souhaitee: '', budget_max: '' },
+    offerForm: { prix_propose: '', delai_jours: '', message: '' },
+    trackingForm: { latitude: '', longitude: '', message: '' },
+    trackingForShipment: null,
+
+    init() {
+      const saved = localStorage.getItem('freedos_token');
+      const savedUser = localStorage.getItem('freedos_user');
+      if (saved && savedUser) {
+        this.token = saved;
+        this.user = JSON.parse(savedUser);
+        this.page = 'dashboard';
+        this.loadDashboard();
+      }
+    },
+
+    showToast(message, type = 'success') {
+      this.toast = { show: true, message, type };
+      setTimeout(() => this.toast.show = false, 4000);
+    },
+
+    async request(method, path, body = null) {
+      const opts = {
+        method,
+        headers: { 'Content-Type': 'application/json', ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {}) }
+      };
+      if (body) opts.body = JSON.stringify(body);
+      const res = await fetch(API + path, opts);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Erreur serveur');
+      return data;
+    },
+
+    async login() {
+      this.loading = true; this.error = null;
+      try {
+        const data = await this.request('POST', '/api/auth/login', { email: this.loginForm.email, mot_de_passe: this.loginForm.password });
+        this.token = data.access_token;
+        this.user = data.user;
+        localStorage.setItem('freedos_token', this.token);
+        localStorage.setItem('freedos_user', JSON.stringify(this.user));
+        this.page = 'dashboard';
+        this.showToast('Connexion réussie ! Bienvenue ' + this.user.prenom);
+        this.loadDashboard();
+      } catch (e) { this.error = e.message; }
+      this.loading = false;
+    },
+
+    async register() {
+      this.loading = true; this.error = null;
+      try {
+        const body = {
+          nom: this.registerForm.nom,
+          prenom: this.registerForm.prenom,
+          email: this.registerForm.email,
+          telephone: this.registerForm.telephone,
+          mot_de_passe: this.registerForm.password,
+          role: this.registerForm.role,
+          type_camion: this.registerForm.type_camion || null,
+          capacite_tonnes: this.registerForm.capacite_tonnes ? parseFloat(this.registerForm.capacite_tonnes) : null,
+          numero_plaque: this.registerForm.numero_plaque || null,
+        };
+        const data = await this.request('POST', '/api/auth/register', body);
+        this.token = data.access_token;
+        this.user = data.user;
+        localStorage.setItem('freedos_token', this.token);
+        localStorage.setItem('freedos_user', JSON.stringify(this.user));
+        this.page = 'dashboard';
+        this.showToast('Compte créé avec succès ! Bienvenue sur FREEDOS');
+        this.loadDashboard();
+      } catch (e) { this.error = e.message; }
+      this.loading = false;
+    },
+
+    logout() {
+      this.user = null; this.token = null;
+      localStorage.removeItem('freedos_token');
+      localStorage.removeItem('freedos_user');
+      this.page = 'home';
+      this.shipments = []; this.stats = {};
+    },
+
+    async loadDashboard() {
+      await Promise.all([this.loadShipments(), this.loadStats()]);
+      if (this.user?.role === 'camionneur') this.loadAvailableShipments();
+    },
+
+    async loadShipments() {
+      try {
+        let url = '/api/shipments';
+        if (this.filterStatus) url += '?statut=' + this.filterStatus;
+        if (this.user?.role === 'camionneur' && this.camionneurTab === 'mes_missions') {
+          url = '/api/shipments?statut=offre_acceptee';
+        }
+        this.shipments = await this.request('GET', url);
+      } catch (e) { console.error(e); }
+    },
+
+    async loadAvailableShipments() {
+      try {
+        this.availableShipments = await this.request('GET', '/api/shipments?statut=en_attente');
+        // Filter out already assigned
+        this.availableShipments = this.availableShipments.filter(s => !s.camionneur_id);
+      } catch (e) { console.error(e); }
+    },
+
+    async loadStats() {
+      try { this.stats = await this.request('GET', '/api/payments/stats'); } catch (e) {}
+    },
+
+    openNewShipment() {
+      this.newShipment = { description: '', type_marchandise: '', poids_kg: '', adresse_depart: '', ville_depart: '', adresse_arrivee: '', ville_arrivee: '', date_souhaitee: '', budget_max: '' };
+      this.modal = 'new_shipment';
+    },
+
+    async createShipment() {
+      this.loading = true;
+      try {
+        const body = {
+          ...this.newShipment,
+          poids_kg: parseFloat(this.newShipment.poids_kg),
+          budget_max: this.newShipment.budget_max ? parseFloat(this.newShipment.budget_max) : null,
+        };
+        await this.request('POST', '/api/shipments', body);
+        this.modal = null;
+        this.showToast('Expédition publiée ! Les camionneurs peuvent maintenant faire des offres.');
+        await this.loadDashboard();
+      } catch (e) { this.showToast(e.message, 'error'); }
+      this.loading = false;
+    },
+
+    async viewShipment(s) {
+      this.selectedShipment = await this.request('GET', '/api/shipments/' + s.id);
+      this.modal = 'shipment_detail';
+      if (this.selectedShipment.statut === 'en_transit' || this.selectedShipment.statut === 'livre') {
+        this.$nextTick(() => this.initMap());
+      }
+    },
+
+    initMap() {
+      setTimeout(() => {
+        if (this.map) { this.map.remove(); this.map = null; }
+        const el = document.getElementById('map');
+        if (!el) return;
+        this.map = L.map('map').setView([12.3640, -1.5275], 7);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap'
+        }).addTo(this.map);
+
+        const truckIcon = L.divIcon({
+          html: '<div style="background:#f97316;color:white;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,0.3)">🚛</div>',
+          iconSize: [36, 36], iconAnchor: [18, 18]
+        });
+
+        this.request('GET', '/api/tracking/history/' + this.selectedShipment.id).then(history => {
+          if (history.length > 0) {
+            const last = history[0];
+            this.mapMarker = L.marker([last.latitude, last.longitude], { icon: truckIcon })
+              .addTo(this.map)
+              .bindPopup(`<b>Dernière position</b><br>${last.message || ''}<br><small>${new Date(last.timestamp).toLocaleString('fr-FR')}</small>`)
+              .openPopup();
+            this.map.setView([last.latitude, last.longitude], 10);
+
+            if (history.length > 1) {
+              const path = history.map(h => [h.latitude, h.longitude]);
+              L.polyline(path, { color: '#f97316', weight: 3, opacity: 0.7 }).addTo(this.map);
+            }
+          }
+        });
+      }, 100);
+    },
+
+    openOfferModal(shipment) {
+      this.selectedShipmentForOffer = shipment;
+      this.offerForm = { prix_propose: '', delai_jours: '', message: '' };
+      this.modal = 'new_offer';
+    },
+
+    async submitOffer() {
+      this.loading = true;
+      try {
+        await this.request('POST', '/api/offers/shipment/' + this.selectedShipmentForOffer.id, {
+          prix_propose: parseFloat(this.offerForm.prix_propose),
+          delai_jours: parseInt(this.offerForm.delai_jours),
+          message: this.offerForm.message
+        });
+        this.modal = null;
+        this.showToast('Offre envoyée avec succès !');
+        await this.loadDashboard();
+      } catch (e) { this.showToast(e.message, 'error'); }
+      this.loading = false;
+    },
+
+    async acceptOffer(offerId) {
+      try {
+        await this.request('POST', '/api/offers/' + offerId + '/accept');
+        this.showToast('Offre acceptée ! Le camionneur a été notifié.');
+        this.modal = null;
+        await this.loadDashboard();
+      } catch (e) { this.showToast(e.message, 'error'); }
+    },
+
+    async refuseOffer(offerId) {
+      try {
+        await this.request('POST', '/api/offers/' + offerId + '/refuse');
+        this.showToast('Offre refusée.', 'info');
+        const updated = await this.request('GET', '/api/shipments/' + this.selectedShipment.id);
+        this.selectedShipment = updated;
+      } catch (e) { this.showToast(e.message, 'error'); }
+    },
+
+    async startTransit(shipmentId) {
+      try {
+        await this.request('PUT', '/api/shipments/' + shipmentId + '/statut?statut=en_transit');
+        this.showToast('Transport démarré ! N\'oubliez pas de mettre à jour votre position.');
+        await this.loadDashboard();
+      } catch (e) { this.showToast(e.message, 'error'); }
+    },
+
+    async markDelivered(shipmentId) {
+      try {
+        await this.request('PUT', '/api/shipments/' + shipmentId + '/statut?statut=livre');
+        this.showToast('Livraison confirmée ! Merci pour votre service.');
+        await this.loadDashboard();
+      } catch (e) { this.showToast(e.message, 'error'); }
+    },
+
+    openTrackingUpdate(shipment) {
+      this.trackingForShipment = shipment;
+      this.trackingForm = { latitude: '', longitude: '', message: '' };
+      this.modal = 'tracking_update';
+    },
+
+    getGPS() {
+      if (!navigator.geolocation) return this.showToast('GPS non disponible', 'error');
+      navigator.geolocation.getCurrentPosition(pos => {
+        this.trackingForm.latitude = pos.coords.latitude.toFixed(6);
+        this.trackingForm.longitude = pos.coords.longitude.toFixed(6);
+        this.showToast('Position GPS récupérée !');
+      }, () => this.showToast('Impossible d\'obtenir la position', 'error'));
+    },
+
+    async sendTrackingUpdate() {
+      if (!this.trackingForm.latitude || !this.trackingForm.longitude) {
+        return this.showToast('Veuillez entrer votre position', 'error');
+      }
+      this.loading = true;
+      try {
+        await this.request('POST', '/api/tracking/update/' + this.trackingForShipment.id, {
+          latitude: parseFloat(this.trackingForm.latitude),
+          longitude: parseFloat(this.trackingForm.longitude),
+          message: this.trackingForm.message
+        });
+        this.modal = null;
+        this.showToast('Position mise à jour avec succès !');
+      } catch (e) { this.showToast(e.message, 'error'); }
+      this.loading = false;
+    },
+
+    async simulatePayment() {
+      try {
+        await this.request('POST', '/api/payments/confirm/' + this.selectedShipment.id);
+        this.showToast('Paiement confirmé ! Transaction sécurisée.');
+        this.modal = null;
+        await this.loadDashboard();
+      } catch (e) { this.showToast(e.message, 'error'); }
+    },
+
+    statusLabel(s) {
+      const labels = {
+        en_attente: 'En attente', offre_acceptee: 'Offre acceptée',
+        en_transit: 'En transit', livre: 'Livré', annule: 'Annulé'
+      };
+      return labels[s] || s;
+    },
+
+    statusClass(s) {
+      const classes = {
+        en_attente: 'bg-yellow-100 text-yellow-700',
+        offre_acceptee: 'bg-blue-100 text-blue-700',
+        en_transit: 'bg-orange-100 text-orange-700',
+        livre: 'bg-green-100 text-green-700',
+        annule: 'bg-red-100 text-red-700'
+      };
+      return classes[s] || 'bg-gray-100 text-gray-700';
+    },
+
+    formatPrice(n) {
+      if (!n) return '0';
+      return new Intl.NumberFormat('fr-FR').format(Math.round(n));
+    },
+
+    formatDate(d) {
+      if (!d) return '';
+      return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+  }
+}
+</script>
+</body>
+</html>
