@@ -43,8 +43,11 @@
   <nav class="bg-primary shadow-lg fixed w-full z-50">
     <div class="max-w-7xl mx-auto px-4 flex items-center justify-between h-16">
       <div class="flex items-center gap-3">
-        <i class="fa-solid fa-truck-moving text-accent text-2xl truck-animation"></i>
-        <span class="text-white font-black text-2xl tracking-wider">FREE<span class="text-accent">DOS</span></span>
+        <img src="/static/logo.jpg" alt="FREEDOS" class="h-10 w-16 object-cover object-right rounded-md border border-white/20" style="object-position: 62% center;"/>
+        <div>
+          <span class="text-white font-black text-xl tracking-wider leading-none">FREE<span class="text-accent">DOS</span></span>
+          <div class="text-blue-300 text-xs font-medium leading-none">GROUP LLC</div>
+        </div>
       </div>
       <div x-show="!user" class="flex gap-3">
         <button @click="page='login'" class="text-white hover:text-accent transition px-4 py-2 rounded font-medium">Connexion</button>
@@ -66,12 +69,13 @@
     <!-- Hero -->
     <div class="gradient-hero min-h-screen flex items-center justify-center pt-16">
       <div class="text-center text-white px-4 fade-in">
-        <div class="mb-6">
-          <i class="fa-solid fa-truck-moving text-accent text-7xl truck-animation"></i>
+        <div class="mb-6 flex justify-center">
+          <img src="/static/logo.jpg" alt="FREEDOS GROUP LLC" class="h-40 md:h-52 rounded-2xl shadow-2xl border-4 border-white/20 object-cover" style="width:320px; object-position: 55% center;"/>
         </div>
-        <h1 class="text-5xl md:text-7xl font-black mb-4 tracking-tight">
+        <h1 class="text-5xl md:text-7xl font-black mb-1 tracking-tight">
           FREE<span class="text-accent">DOS</span>
         </h1>
+        <p class="text-sm md:text-base font-semibold text-accent mb-3 tracking-widest uppercase">GROUP LLC</p>
         <p class="text-xl md:text-2xl mb-3 font-light text-blue-100">Transport & Logistique Intelligente</p>
         <p class="text-base md:text-lg text-blue-200 mb-10 max-w-2xl mx-auto">
           La plateforme qui connecte les <strong class="text-white">clients</strong> aux meilleurs <strong class="text-white">camionneurs</strong> pour des livraisons rapides, sécurisées et traçables.
@@ -157,11 +161,19 @@
 
     <!-- Footer -->
     <footer class="bg-primary text-white py-10 text-center">
-      <div class="flex items-center justify-center gap-3 mb-4">
-        <i class="fa-solid fa-truck-moving text-accent text-2xl"></i>
-        <span class="font-black text-2xl">FREE<span class="text-accent">DOS</span></span>
+      <div class="flex items-center justify-center gap-4 mb-4">
+        <img src="/static/logo.jpg" alt="FREEDOS" class="h-14 w-20 object-cover rounded-lg border border-white/20" style="object-position: 55% center;"/>
+        <div class="text-left">
+          <div class="font-black text-2xl">FREE<span class="text-accent">DOS</span></div>
+          <div class="text-accent text-xs font-semibold tracking-widest">GROUP LLC</div>
+          <div class="text-blue-300 text-xs mt-1">Shipping · Import · Export · Distribution</div>
+        </div>
       </div>
-      <p class="text-blue-200 text-sm">&copy; 2025 FREEDOS — Transport & Logistique. Tous droits réservés.</p>
+      <div class="text-blue-300 text-sm mb-2">
+        <span class="mr-4"><i class="fa-solid fa-phone mr-1"></i>+1 7064261731 / +1 6465208589</span>
+        <span><i class="fa-solid fa-envelope mr-1"></i>freedosgroup@gmail.com</span>
+      </div>
+      <p class="text-blue-400 text-xs">&copy; 2025 FREEDOS GROUP LLC — Transport & Logistique. Tous droits réservés.</p>
     </footer>
   </div>
 
@@ -169,8 +181,8 @@
   <div x-show="page === 'login'" x-cloak class="min-h-screen gradient-hero flex items-center justify-center pt-16 px-4">
     <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md fade-in">
       <div class="text-center mb-8">
-        <i class="fa-solid fa-truck-moving text-accent text-4xl truck-animation"></i>
-        <h2 class="text-3xl font-black text-primary mt-3">FREE<span class="text-accent">DOS</span></h2>
+        <img src="/static/logo.jpg" alt="FREEDOS" class="h-20 w-32 object-cover rounded-xl mx-auto shadow-md border border-gray-100" style="object-position: 55% center;"/>
+        <h2 class="text-2xl font-black text-primary mt-3">FREE<span class="text-accent">DOS</span> <span class="text-sm font-semibold text-gray-400">GROUP LLC</span></h2>
         <p class="text-gray-500 mt-1">Connexion à votre compte</p>
       </div>
       <div x-show="error" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-5 text-sm flex items-center gap-2">
@@ -210,8 +222,8 @@
   <div x-show="page === 'register'" x-cloak class="min-h-screen gradient-hero flex items-center justify-center pt-16 pb-10 px-4">
     <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg fade-in">
       <div class="text-center mb-6">
-        <i class="fa-solid fa-truck-moving text-accent text-4xl truck-animation"></i>
-        <h2 class="text-3xl font-black text-primary mt-3">FREE<span class="text-accent">DOS</span></h2>
+        <img src="/static/logo.jpg" alt="FREEDOS" class="h-20 w-32 object-cover rounded-xl mx-auto shadow-md border border-gray-100" style="object-position: 55% center;"/>
+        <h2 class="text-2xl font-black text-primary mt-3">FREE<span class="text-accent">DOS</span> <span class="text-sm font-semibold text-gray-400">GROUP LLC</span></h2>
         <p class="text-gray-500 mt-1">Créer un nouveau compte</p>
       </div>
       <div x-show="error" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-5 text-sm flex items-center gap-2">
